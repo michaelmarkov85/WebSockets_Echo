@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
@@ -11,6 +12,8 @@ namespace WebSockets_Echo
 {
 	public class NotificationWsMiddleware
 	{
+		private static ConcurrentDictionary<string, List<string>> _owners = new ConcurrentDictionary<string, List<string>>();
+
 		private static ConcurrentDictionary<string, WebSocket> _sockets = new ConcurrentDictionary<string, WebSocket>();
 
 		private readonly RequestDelegate _next;
@@ -26,10 +29,18 @@ namespace WebSockets_Echo
 				await _next.Invoke(context);
 				return;
 			}
-
 			CancellationToken ct = context.RequestAborted;
 			WebSocket currentSocket = await context.WebSockets.AcceptWebSocketAsync();
+
+			string ownerId = context.Request.Query["owner"].ToString();
 			string socketId = Guid.NewGuid().ToString();
+
+			// adding owner->socketIds 
+			if (_owners.TryGetValue(ownerId, out List<string> socketIds))
+				socketIds.Add(socketId);
+			else
+				_owners.TryAdd(ownerId, new List<string> { socketId });
+			// TODO: make remove logic
 
 			_sockets.TryAdd(socketId, currentSocket);
 			await Echo(currentSocket, socketId, ct);
@@ -55,7 +66,7 @@ namespace WebSockets_Echo
 					continue;
 				}
 
-				await BroadcastMessage(response, ct);
+				await ProcessMessage(response, ct);
 			}
 
 			WebSocket dummy;
@@ -65,17 +76,31 @@ namespace WebSockets_Echo
 			currentSocket.Dispose();
 		}
 
-		internal static async Task BroadcastMessage(string data, CancellationToken ct = default(CancellationToken))
+		internal static async Task ProcessMessage(string message, CancellationToken ct = default(CancellationToken))
 		{
-			foreach (var socket in _sockets)
+			var f = message.Split('_');
+			if (f.Length == 3) // correct message - from, to and text
 			{
-				if (socket.Value.State != WebSocketState.Open)
-				{
-					continue;
-				}
-
-				await SendStringAsync(socket.Value, data, ct);
+				await Task.WhenAll(BroadcastMessage(f[2], f[1]), BroadcastMessage(f[2], f[0]));
 			}
+			else
+				await BroadcastMessageToAll("Wrong message format: " + message);
+		}
+
+		internal static async Task BroadcastMessage(string data, string ownerId, CancellationToken ct = default(CancellationToken))
+		{
+			if (_owners.TryGetValue(ownerId, out List<string> socketIds))
+				if (socketIds!= null && socketIds.Count>0)
+					foreach (string sId in socketIds)
+						if (_sockets.TryGetValue(sId, out WebSocket socket))
+							if (socket != null || socket.State == WebSocketState.Open)
+								await SendStringAsync(socket, data, ct);
+		}
+		internal static async Task BroadcastMessageToAll(string data, CancellationToken ct = default(CancellationToken))
+		{
+			foreach (var s in _sockets)
+				if(s.Value.State == WebSocketState.Open)
+					await SendStringAsync(s.Value, data, ct);
 		}
 
 		private static Task SendStringAsync(WebSocket socket, string data, CancellationToken ct = default(CancellationToken))

@@ -1,160 +1,281 @@
-<!DOCTYPE html>  
-<html>  
-<head>  
-    <meta charset="utf-8" />  
-    <title></title>  
-    <style>  
-        table {  
-            border: 0  
-        }  
-  
-        .commslog-data {  
-            font-family: Consolas, Courier New, Courier, monospace;  
-        }  
-  
-        .commslog-server {  
-            background-color: red;  
-            color: white  
-        }  
-  
-        .commslog-client {  
-            background-color: green;  
-            color: white  
-        }  
-    </style>  
-</head>  
-<body>  
-    <h1>WebSocket Sample Application</h1>  
-    <p id="stateLabel">Ready to connect...</p>  
-    <div>  
-        <label for="connectionUrl">WebSocket Server URL:</label>  
-        <input id="connectionUrl" />  
-        <button id="connectButton" type="submit">Connect</button>  
-    </div>  
-    <p></p>  
-    <div>  
-        <label for="sendMessage">Message to send:</label>  
-        <input id="sendMessage" disabled />  
-        <button id="sendButton" type="submit" disabled>Send</button>  
-        <button id="closeButton" disabled>Close Socket</button>  
-    </div>  
-    <h2>Communication Log</h2>  
-    <table style="width: 800px">  
-        <thead>  
-            <tr>  
-                <td style="width: 100px">From</td>  
-                <td style="width: 100px">To</td>  
-                <td>Data</td>  
-            </tr>  
-        </thead>  
-        <tbody id="commsLog"></tbody>  
-    </table>  
-    <script>  
-        var connectionForm = document.getElementById("connectionForm");  
-        var connectionUrl = document.getElementById("connectionUrl");  
-        var connectButton = document.getElementById("connectButton");  
-        var stateLabel = document.getElementById("stateLabel");  
-        var sendMessage = document.getElementById("sendMessage");  
-        var sendButton = document.getElementById("sendButton");  
-        var sendForm = document.getElementById("sendForm");  
-        var commsLog = document.getElementById("commsLog");  
-        var socket;  
-        var scheme = document.location.protocol == "https:" ? "wss" : "ws";  
-        var port = document.location.port ? (":" + document.location.port) : "";  
-        connectionUrl.value = scheme + "://" + document.location.hostname + port + "/ws";  
-  
-        function updateState() {  
-            function disable() {  
-                sendMessage.disabled = true;  
-                sendButton.disabled = true;  
-                closeButton.disabled = true;  
-            }  
-  
-            function enable() {  
-                sendMessage.disabled = false;  
-                sendButton.disabled = false;  
-                closeButton.disabled = false;  
-            }  
-  
-            connectionUrl.disabled = true;  
-            connectButton.disabled = true;  
-  
-            if (!socket) {  
-                disable();  
-            } else {  
-                switch (socket.readyState) {  
-                    case WebSocket.CLOSED:  
-                        stateLabel.innerHTML = "Closed";  
-                        disable();  
-                        connectionUrl.disabled = false;  
-                        connectButton.disabled = false;  
-                        break;  
-                    case WebSocket.CLOSING:  
-                        stateLabel.innerHTML = "Closing...";  
-                        disable();  
-                        break;  
-                    case WebSocket.CONNECTING:  
-                        stateLabel.innerHTML = "Connecting...";  
-                        disable();  
-                        break;  
-                    case WebSocket.OPEN:  
-                        stateLabel.innerHTML = "Open";  
-                        enable();  
-                        break;  
-                    default:  
-                        stateLabel.innerHTML = "Unknown WebSocket State: " + socket.readyState;  
-                        disable();  
-                        break;  
-                }  
-            }  
-        }  
-  
-        closeButton.onclick = function () {  
-            if (!socket || socket.readyState != WebSocket.OPEN) {  
-                alert("socket not connected");  
-            }  
-            socket.close(1000, "Closing from client");  
-        }  
-  
-        sendButton.onclick = function () {  
-            if (!socket || socket.readyState != WebSocket.OPEN) {  
-                alert("socket not connected");  
-            }  
-            var data = sendMessage.value;  
-            socket.send(data);  
-            commsLog.innerHTML += '<tr>' +  
-                '<td class="commslog-client">Client</td>' +  
-                '<td class="commslog-server">Server</td>' +  
-                '<td class="commslog-data">' + data + '</td>'  
-            '</tr>';  
-        }  
-  
-        connectButton.onclick = function () {  
-            stateLabel.innerHTML = "Connecting";  
-            socket = new WebSocket(connectionUrl.value);  
-            socket.onopen = function (event) {  
-                updateState();  
-                commsLog.innerHTML += '<tr>' +  
-                    '<td colspan="3" class="commslog-data">Connection opened</td>' +  
-                    '</tr>';  
-            };  
-  
-            socket.onclose = function (event) {  
-                updateState();  
-                commsLog.innerHTML += '<tr>' +  
-                    '<td colspan="3" class="commslog-data">Connection closed. Code: ' + event.code + '. Reason: ' + event.reason + '</td>' +  
-                    '</tr>';  
-            };  
-  
-            socket.onerror = updateState;  
-            socket.onmessage = function (event) {  
-                commsLog.innerHTML += '<tr>' +  
-                    '<td class="commslog-server">Server</td>' +  
-                    '<td class="commslog-client">Client</td>' +  
-                    '<td class="commslog-data">' + event.data + '</td>'  
-                '</tr>';  
-            };  
-        };  
-    </script>  
-</body>  
-</html>  
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title></title>
+	<style>
+		table {
+			border: 0
+		}
+
+		.commslog-data {
+			font-family: Consolas, Courier New, Courier, monospace;
+		}
+
+		.commslog-server {
+			background-color: red;
+			color: white
+		}
+
+		.commslog-client {
+			background-color: green;
+			color: white
+		}
+
+	</style>
+</head>
+
+<body>
+	<!--   HEADER ====================================================================== -->
+	<h1>Notifications</h1>
+	<p id="stateLabel">Ready to connect...</p>
+	<!--   CONNECTION INPUTS AND BUTTONS ========================================================== -->
+	<div>
+		<div>
+			<label for="ownerId">Owner of merchants:</label>
+			<select id="ownerId">
+			<option value="1">Owner 1</option>
+		  	<option value="2">Owner 2</option>
+		  	<option value="3">Owner 3</option>
+		  	<option value="4">Owner 4</option>
+		  	<option value="5">Owner 5</option>
+		</select>
+		</div>
+		<div>
+			<label for="connectionUrl">WebSocket URL:</label>
+			<input id="connectionUrl" />
+		</div>
+		<div>
+			<button id="connectButton" type="submit">Connect</button>
+			<button id="closeButton" disabled>Close Socket</button>
+		</div>
+		<p></p>
+	</div>
+	<!--   CHATS ============================================================= -->
+	<div id="chatContainer">
+		<div>
+			<label for="sendMessage_to_1">Chat with owner 1:</label>
+			<input id="sendMessage_to_1" disabled />
+			<button id="sendButton_to_1" type="submit" disabled>Send</button>
+		</div>
+		<div>
+			<label for="sendMessage_to_2">Chat with owner 2:</label>
+			<input id="sendMessage_to_2" disabled />
+			<button id="sendButton_to_2" type="submit" disabled>Send</button>
+		</div>
+		<div>
+			<label for="sendMessage_to_3">Chat with owner 3:</label>
+			<input id="sendMessage_to_3" disabled />
+			<button id="sendButton_to_3" type="submit" disabled>Send</button>
+		</div>
+		<div>
+			<label for="sendMessage_to_4">Chat with owner 4:</label>
+			<input id="sendMessage_to_4" disabled />
+			<button id="sendButton_to_4" type="submit" disabled>Send</button>
+		</div>
+		<div>
+			<label for="sendMessage_to_5">Chat with owner 5:</label>
+			<input id="sendMessage_to_5" disabled />
+			<button id="sendButton_to_5" type="submit" disabled>Send</button>
+		</div>
+	</div>
+	<!--   L O G ============================================================================== -->
+	<div>
+		<h2>Communication Log</h2>
+		<table style="width: 800px">
+			<thead>
+				<tr>
+					<td style="width: 100px">From</td>
+					<td style="width: 100px">To</td>
+					<td>Data</td>
+				</tr>
+			</thead>
+			<tbody id="commsLog"></tbody>
+		</table>
+	</div>
+	<!--   SCRIPT  ============================================================================== -->
+
+	<script>
+		var chatContainer = document.getElementById("chatContainer");
+		var ownerId = document.getElementById("ownerId");
+		var connectionForm = document.getElementById("connectionForm");
+		var connectionUrl = document.getElementById("connectionUrl");
+		var connectButton = document.getElementById("connectButton");
+		var stateLabel = document.getElementById("stateLabel");
+
+		var sendMessage_to_1 = document.getElementById("sendMessage_to_1");
+		var sendMessage_to_2 = document.getElementById("sendMessage_to_2");
+		var sendMessage_to_3 = document.getElementById("sendMessage_to_3");
+		var sendMessage_to_4 = document.getElementById("sendMessage_to_4");
+		var sendMessage_to_5 = document.getElementById("sendMessage_to_5");
+
+		var sendButton_to_1 = document.getElementById("sendButton_to_1");
+		var sendButton_to_2 = document.getElementById("sendButton_to_2");
+		var sendButton_to_3 = document.getElementById("sendButton_to_3");
+		var sendButton_to_4 = document.getElementById("sendButton_to_4");
+		var sendButton_to_5 = document.getElementById("sendButton_to_5");
+
+		var sendForm = document.getElementById("sendForm");
+		var commsLog = document.getElementById("commsLog");
+		var socket;
+		var scheme = document.location.protocol == "https:" ? "wss" : "ws";
+		var port = document.location.port ? (":" + document.location.port) : "";
+		connectionUrl.value = scheme + "://localhost:57114";
+
+		function updateState() {
+			function disable() {
+				sendMessage_to_1.disabled = true;
+				sendMessage_to_2.disabled = true;
+				sendMessage_to_3.disabled = true;
+				sendMessage_to_4.disabled = true;
+				sendMessage_to_5.disabled = true;
+
+				sendButton_to_1.disabled = true;
+				sendButton_to_2.disabled = true;
+				sendButton_to_3.disabled = true;
+				sendButton_to_4.disabled = true;
+				sendButton_to_5.disabled = true;
+
+				closeButton.disabled = true;
+			}
+
+			function enable() {
+				var selected = ownerId.selectedIndex + 1;
+
+				if (selected != 1) {
+					sendMessage_to_1.disabled = false;
+					sendButton_to_1.disabled = false;
+				}
+				if (selected != 2) {
+					sendMessage_to_2.disabled = false;
+					sendButton_to_2.disabled = false;
+				}
+				if (selected != 3) {
+					sendMessage_to_3.disabled = false;
+					sendButton_to_3.disabled = false;
+				}
+				if (selected != 4) {
+					sendMessage_to_4.disabled = false;
+					sendButton_to_4.disabled = false;
+				}
+				if (selected != 5) {
+					sendMessage_to_5.disabled = false;
+					sendButton_to_5.disabled = false;
+				}
+
+				closeButton.disabled = false;
+
+
+			}
+
+			connectionUrl.disabled = true;
+			connectButton.disabled = true;
+			ownerId.disabled = true;
+
+			if (!socket) {
+				disable();
+			} else {
+				switch (socket.readyState) {
+					case WebSocket.CLOSED:
+						stateLabel.innerHTML = "Closed";
+						disable();
+						connectionUrl.disabled = false;
+						connectButton.disabled = false;
+						ownerId.disabled = false;
+						break;
+					case WebSocket.CLOSING:
+						stateLabel.innerHTML = "Closing...";
+						disable();
+						break;
+					case WebSocket.CONNECTING:
+						stateLabel.innerHTML = "Connecting...";
+						disable();
+						break;
+					case WebSocket.OPEN:
+						stateLabel.innerHTML = "Open";
+						enable();
+						break;
+					default:
+						stateLabel.innerHTML = "Unknown WebSocket State: " + socket.readyState;
+						disable();
+						break;
+				}
+			}
+		}
+
+		closeButton.onclick = function() {
+			if (!socket || socket.readyState != WebSocket.OPEN) {
+				alert("socket not connected");
+			}
+			socket.close(1000, "Closing from client");
+		}
+
+		sendButton_to_1.onclick = function() {
+			sendChatMsg(1, sendMessage_to_1.value);
+			sendMessage_to_1.value = '';
+		}
+		sendButton_to_2.onclick = function() {
+			sendChatMsg(2, sendMessage_to_2.value);
+			sendMessage_to_2.value = '';
+		}
+		sendButton_to_3.onclick = function() {
+			sendChatMsg(3, sendMessage_to_3.value);
+			sendMessage_to_3.value = '';
+		}
+		sendButton_to_4.onclick = function() {
+			sendChatMsg(4, sendMessage_to_4.value);
+			sendMessage_to_4.value = '';
+		}
+		sendButton_to_5.onclick = function() {
+			sendChatMsg(5, sendMessage_to_5.value);
+			sendMessage_to_5.value = '';
+		}
+
+		function sendChatMsg(to, msg) {
+			if (!socket || socket.readyState != WebSocket.OPEN) {
+				alert("socket not connected");
+			}
+			
+			var from = ownerId.selectedIndex + 1;
+			var data = from + '_' + to + '_' + msg;
+			socket.send(data);
+			commsLog.innerHTML += '<tr>' +
+				'<td class="commslog-client">Client</td>' +
+				'<td class="commslog-server">Server</td>' +
+				'<td class="commslog-data">' + data + '</td>'
+			'</tr>';
+		}
+
+		connectButton.onclick = function() {
+			stateLabel.innerHTML = "Connecting";
+			var owner = ownerId.selectedIndex + 1;
+			socket = new WebSocket(connectionUrl.value+ '?owner=' + owner);
+			socket.onopen = function(event) {
+				updateState();
+				commsLog.innerHTML += '<tr>' +
+					'<td colspan="3" class="commslog-data">Connection opened</td>' +
+					'</tr>';
+			};
+
+			socket.onclose = function(event) {
+				updateState();
+				commsLog.innerHTML += '<tr>' +
+					'<td colspan="3" class="commslog-data">Connection closed. Code: ' + event.code + '. Reason: ' + event.reason + '</td>' +
+					'</tr>';
+			};
+
+			socket.onerror = updateState;
+			socket.onmessage = function(event) {
+				commsLog.innerHTML += '<tr>' +
+					'<td class="commslog-server">Server</td>' +
+					'<td class="commslog-client">Client</td>' +
+					'<td class="commslog-data">' + event.data + '</td>'
+				'</tr>';
+			};
+		};
+
+	</script>
+</body>
+
+</html>
