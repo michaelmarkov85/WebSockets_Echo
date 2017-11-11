@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 
 <head>
@@ -35,11 +35,11 @@
 		<div>
 			<label for="ownerId">Owner of merchants:</label>
 			<select id="ownerId">
-			<option value="1">Owner 1</option>
-		  	<option value="2">Owner 2</option>
-		  	<option value="3">Owner 3</option>
-		  	<option value="4">Owner 4</option>
-		  	<option value="5">Owner 5</option>
+			<option value="a6241f60-bf59-4cfe-8dcb-a17c81d7abb5">Owner 1</option>
+		  	<option value="9bf6771c-f88c-4b1d-9023-1620eba39c6d">Owner 2</option>
+		  	<option value="a31a2a69-eb6e-4257-b8f8-73b5addecc15">Owner 3</option>
+		  	<option value="cef590a7-1e2d-43f2-ba0a-cfe20fb54090">Owner 4</option>
+		  	<option value="a6b795a4-fa5f-44be-8ea7-875e2f9cef55">Owner 5</option>
 		</select>
 		</div>
 		<div>
@@ -212,23 +212,23 @@
 		}
 
 		sendButton_to_1.onclick = function() {
-			sendChatMsg(1, sendMessage_to_1.value);
+			sendChatMsg("a6241f60-bf59-4cfe-8dcb-a17c81d7abb5", sendMessage_to_1.value);
 			sendMessage_to_1.value = '';
 		}
 		sendButton_to_2.onclick = function() {
-			sendChatMsg(2, sendMessage_to_2.value);
+			sendChatMsg("9bf6771c-f88c-4b1d-9023-1620eba39c6d", sendMessage_to_2.value);
 			sendMessage_to_2.value = '';
 		}
 		sendButton_to_3.onclick = function() {
-			sendChatMsg(3, sendMessage_to_3.value);
+			sendChatMsg("a31a2a69-eb6e-4257-b8f8-73b5addecc15", sendMessage_to_3.value);
 			sendMessage_to_3.value = '';
 		}
 		sendButton_to_4.onclick = function() {
-			sendChatMsg(4, sendMessage_to_4.value);
+			sendChatMsg("cef590a7-1e2d-43f2-ba0a-cfe20fb54090", sendMessage_to_4.value);
 			sendMessage_to_4.value = '';
 		}
 		sendButton_to_5.onclick = function() {
-			sendChatMsg(5, sendMessage_to_5.value);
+			sendChatMsg("a6b795a4-fa5f-44be-8ea7-875e2f9cef55", sendMessage_to_5.value);
 			sendMessage_to_5.value = '';
 		}
 
@@ -237,19 +237,29 @@
 				alert("socket not connected");
 			}
 			
-			var from = ownerId.selectedIndex + 1;
-			var data = from + '_' + to + '_' + msg;
-			socket.send(data);
+			var from = ownerId.options[ownerId.selectedIndex].value;
+
+			var data = {
+				Type: 'chat_from_merchant',
+				Data:{
+					From: from,
+					To: to,
+					Body: msg,
+					Created: new Date(Date.now()).toISOString()
+				}
+			}
+			var jsonMsg = JSON.stringify(data);
+			socket.send(jsonMsg);
 			commsLog.innerHTML += '<tr>' +
 				'<td class="commslog-client">Client</td>' +
 				'<td class="commslog-server">Server</td>' +
-				'<td class="commslog-data">' + data + '</td>'
+				'<td class="commslog-data">' + jsonMsg + '</td>'
 			'</tr>';
 		}
 
 		connectButton.onclick = function() {
 			stateLabel.innerHTML = "Connecting";
-			var owner = ownerId.selectedIndex + 1;
+			var owner = ownerId.options[ownerId.selectedIndex].value;
 			socket = new WebSocket(connectionUrl.value+ '?owner=' + owner);
 			socket.onopen = function(event) {
 				updateState();

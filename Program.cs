@@ -46,7 +46,7 @@ namespace WebSockets_Echo
 		{
 			var body = ea.Body;
 			string message = Encoding.UTF8.GetString(body);
-			await NotificationWsMiddleware.ProcessMessage(message);
+			//await NotificationMiddleware.ProcessMessage(message);
 		}
 
 		public static IWebHost BuildWebHost(string[] args) =>
