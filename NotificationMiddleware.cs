@@ -3,7 +3,6 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
 
 namespace WebSockets_Echo
 {
@@ -13,18 +12,18 @@ namespace WebSockets_Echo
 
 		private readonly RequestDelegate _next;
 		private readonly IdentityProvider _identity;
-		private readonly WebsocketManager _wsm;
-		private readonly ClientMessages.ClientMessageHandler _clientMessageHandler;
+		private readonly IWebsocketManager _wsManager;
+		private readonly WsListener.WsClient _wsListener;
+		private readonly WsListener.WsMessageHandler _wsMessageHandler;
 
-
-		public NotificationMiddleware(RequestDelegate next, WebsocketManager wsm)
+		public NotificationMiddleware(RequestDelegate next, IWebsocketManager wsManager)
 		{
 			_next = next;
 			_identity = new IdentityProvider();
-			_wsm = wsm;
-			_clientMessageHandler = new ClientMessages.ClientMessageHandler(_wsm);
+			_wsManager = wsManager;
+			_wsMessageHandler = new WsListener.WsMessageHandler(_wsManager);
+			_wsListener = new WsListener.WsClient(_wsMessageHandler, _wsManager);
 		}
-
 
 		public async Task Invoke(HttpContext context)
 		{
@@ -58,8 +57,8 @@ namespace WebSockets_Echo
 
 			try
 			{
-				_wsm.AddSocket(currentSocket, owner);
-				await _clientMessageHandler.Listen(currentSocket, ct);
+				_wsManager.AddSocket(currentSocket, owner);
+				await _wsListener.Listen(currentSocket, ct);
 			}
 			catch (Exception ex)
 			{
@@ -72,62 +71,5 @@ namespace WebSockets_Echo
 			// TODO: Implement sub protocols
 			return true;
 		}
-
-		public async Task ProcessMessage(string message, CancellationToken ct = default(CancellationToken))
-		{
-			var jsonSettings = new JsonSerializerSettings { DateTimeZoneHandling = DateTimeZoneHandling.Utc };
-
-			Msg msg = ParseMessage(message);
-
-			if (!msg?.IsValid ?? true)
-				return;
-
-			switch (msg.Type.ToLower())
-			{
-				case "offer_commented_data":
-					await ProcessRmqMessage(msg);
-					break;
-				default:
-					Console.WriteLine($"Couldn't find match action for message type '{msg.Type}'");
-					break;
-			}
-		}
-
-		private async Task ProcessRmqMessage(Msg msg)
-		{
-
-			if(!msg?.IsValid ?? false)
-			{
-				Console.WriteLine($"Couldn't find match action for message type '{msg.Type}'");
-				return;
-			}
-
-			string recipient = msg.Recipient;
-
-			WebsocketMessage wsMessagt = msg;
-
-			await _wsm.SendToRecipientAsync(recipient, (msg as WebsocketMessage).ToString());
-
-		}
-
-		
-
-
-		private static Msg ParseMessage(string message)
-		{
-			Msg result = null;
-			try
-			{
-				result = JsonConvert.DeserializeObject<Msg>(message );
-			}
-			catch (Exception ex)
-			{
-				var t = ex.Message;
-			}
-			return result;
-		}
-
-
-		
 	}
-	}
+}

@@ -1,17 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace WebSockets_Echo.ClientMessages
+namespace WebSockets_Echo.WsListener
 {
 	[Serializable]
-	public class ClientMesage
+	public class WsMesage
 	{
 		public string Type { get; set; }
 		public dynamic Data { get; set; }
 
+		public WsMesage()
+		{		}
+
+		public WsMesage( string type, dynamic data)
+		{
+			Type = type;
+			Data = data;
+		}
+
+
+		[JsonIgnore]
 		public bool IsValid => !string.IsNullOrWhiteSpace(Type) && Data != null;
 
 		/// <summary>
@@ -20,10 +28,14 @@ namespace WebSockets_Echo.ClientMessages
 		/// </summary>
 		/// <param name="message"></param>
 		/// <returns></returns>
-		public static ClientMesage Parse(string message)
+		public static WsMesage Parse(string message)
 		{
-			return JsonConvert.DeserializeObject<ClientMesage>(message);
+			return JsonConvert.DeserializeObject<WsMesage>(message);
 		}
 
+		public override string ToString()
+		{
+			return JsonConvert.SerializeObject(this);
+		}
 	}
 }

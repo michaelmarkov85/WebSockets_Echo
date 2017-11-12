@@ -3,7 +3,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="RmqMessages\" />
+    <Folder Include="RmqListener\MessageData\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
   <ItemGroup>
